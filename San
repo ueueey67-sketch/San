@@ -1,0 +1,90 @@
+-- ===================================================
+-- The Strongest Battlegrounds - Utility Script
+-- ===================================================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Configurations
+local Config = {
+    LockTarget = false,
+    AutoDash = false,
+    SpeedHack = false,
+    WalkSpeed = 32, -- ความเร็วปกติของ Roblox คือ 16
+    Target = nil
+}
+
+-- 1. ระบบสกิลล็อก (Skill Lock / Aimlock)
+local function GetClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+    local mouse = LocalPlayer:GetMouse()
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local pos = player.Character.HumanoidRootPart.Position
+            local distance = (mouse.Hit.Position - pos).Magnitude
+            if distance < shortestDistance then
+                shortestDistance = distance
+                closestPlayer = player
+            end
+        end
+    end
+    return closestPlayer
+end
+
+-- ล็อกมุมกล้องไปที่เป้าหมาย
+RunService.RenderStepped:Connect(function()
+    if Config.LockTarget and Config.Target and Config.Target.Character and Config.Target.Character:FindFirstChild("HumanoidRootPart") then
+        local camera = workspace.CurrentCamera
+        local targetPos = Config.Target.Character.HumanoidRootPart.Position
+        camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
+    end
+end)
+
+-- 2. ระบบแดชอัตโนมัติ (Auto Dash)
+local function PerformDash()
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        -- ใช้ VirtualInputManager หรือแรง VectorForce เพื่อช่วยพุ่งตัว
+        local hrp = char.HumanoidRootPart
+        hrp.Velocity = hrp.CFrame.LookVector * 100
+    end
+end
+
+-- 3. ระบบวิ่งเร็ว (WalkSpeed Modifier)
+RunService.Stepped:Connect(function()
+    if Config.SpeedHack and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = Config.WalkSpeed
+    end
+end)
+
+-- Hotkey Toggle
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+
+    -- กด 'E' เพื่อ Toggle สกิลล็อก
+    if input.KeyCode == Enum.KeyCode.E then
+        Config.LockTarget = not Config.LockTarget
+        if Config.LockTarget then
+            Config.Target = GetClosestPlayer()
+            print("Target Locked: " .. (Config.Target and Config.Target.Name or "None"))
+        else
+            Config.Target = nil
+            print("Target Unlocked")
+        end
+    end
+
+    -- กด 'Q' เพื่อใช้งาน แดชอัตโนมัติ
+    if input.KeyCode == Enum.KeyCode.Q and Config.AutoDash then
+        PerformDash()
+    end
+
+    -- กด 'V' เพื่อ Toggle วิ่งเร็ว
+    if input.KeyCode == Enum.KeyCode.V then
+        Config.SpeedHack = not Config.SpeedHack
+        print("Speed Hack: " .. tostring(Config.SpeedHack))
+    end
+end)
